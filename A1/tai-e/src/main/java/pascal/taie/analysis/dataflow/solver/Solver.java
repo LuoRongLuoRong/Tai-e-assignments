@@ -82,6 +82,24 @@ public abstract class Solver<Node, Fact> {
 
     protected void initializeBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        // 实现第 2.2 节中算法的前三行；
+        // IN[exit] = 空
+        // for (each basic block B\exit)
+        //     IN[B] = 空
+
+        System.out.println("    cfg nodes 的数目：" + cfg.getNodes().size());
+        for (Node node: cfg) {
+            result.setInFact(node, analysis.newInitialFact());
+            result.setOutFact(node, analysis.newInitialFact());
+        }
+
+        Node exit = cfg.getExit();
+        result.setInFact(exit, analysis.newBoundaryFact(cfg));
+        result.setOutFact(exit, analysis.newBoundaryFact(cfg));
+
+        Node entry = cfg.getEntry();
+        result.setInFact(entry, analysis.newBoundaryFact(cfg));
+        result.setOutFact(entry, analysis.newBoundaryFact(cfg));
     }
 
     /**

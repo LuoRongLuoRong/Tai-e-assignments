@@ -26,6 +26,9 @@ import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
 
+import java.util.ArrayList;
+import java.util.List;
+
 class IterativeSolver<Node, Fact> extends Solver<Node, Fact> {
 
     public IterativeSolver(DataflowAnalysis<Node, Fact> analysis) {
@@ -40,5 +43,35 @@ class IterativeSolver<Node, Fact> extends Solver<Node, Fact> {
     @Override
     protected void doSolveBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        System.out.println("LUORONG: doSolveBackward");
+        // 完成对应的 while 循环
+        // meetinto: out
+        // transfernode: in
+
+        // 此处需要逆序处理
+        List<Node> reverseNodes = new ArrayList<>();
+        for (Node node : cfg) {
+            reverseNodes.add(0, node);
+        }
+
+        boolean anyInHasChange = true;
+        while (anyInHasChange) {
+            anyInHasChange = false;
+            for (Node node : reverseNodes) {
+//                System.out.println("    node: " + node.toString());
+                if (cfg.isExit(node)) {
+                    continue;
+                }
+                // OUT[node]
+                result.setOutFact(node, analysis.newInitialFact());
+                for (Node suc : cfg.getSuccsOf(node)) {
+                    analysis.meetInto(result.getInFact(suc), result.getOutFact(node));
+                }
+
+                // IN[node]
+                anyInHasChange |= analysis.transferNode(node, result.getInFact(node), result.getOutFact(node));
+            }
+        }
+
     }
 }

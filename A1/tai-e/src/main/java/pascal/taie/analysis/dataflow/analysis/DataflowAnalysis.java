@@ -26,6 +26,18 @@ import pascal.taie.analysis.graph.cfg.CFG;
 import pascal.taie.analysis.graph.cfg.Edge;
 
 /**
+ * 这是一个抽象的数据流分析类，是具体的数据流分析与求解器之间的接口。
+ * 也就是说，一个具体的数据流分析（如活跃变量分析）需要实现它的接口，
+ * 而求解器（如迭代求解器）需要通过它的接口来求解数据流。
+ * 它共有七个 API，而在本次作业中，我们只关注与数据流分析相关的五个关键 API（
+ * 见第 4 讲课件的第 301 页）：分析方向、边界条件、初始条件、meet 操作、
+ * transfer 函数。你可以阅读源代码与注释快速熟悉这些接口方法。
+ *
+ * 需要注意的是，这里的API与课程中介绍的稍有区别：为了简单起见，
+ * 这里的transfer函数处理的是单条语句而非程序块。
+ */
+
+/**
  * Template interface for defining data-flow analysis.
  *
  * @param <Node> type of CFG nodes
