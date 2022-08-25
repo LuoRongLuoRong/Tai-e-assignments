@@ -76,8 +76,38 @@ public abstract class Solver<Node, Fact> {
         return result;
     }
 
+    /**
+     * 常量传播是一个前向分析，你只需要关注前向分析相关的方法。
+     * 方法的具体实现可以参考第 6 讲课件的第 258 页上算法的前三行。
+     *
+     * 讲义中的 worklist 算法通过比较 old_OUT 和 OUT[B] 来决定后继节点是否应当加入 worklist 中，这个做法比较低效。
+     * Tai-e 中 DataflowAnalysis.transferNode() 会返回此次 transfer 是否改变了 OUT fact。利用好这一点可以避免多余的判断；
+     *
+     * 与作业 1 类似，不要忘了在 Solver.initializeForward() 中初始化每个语句的 IN 和 OUT。
+     *
+     * @param cfg
+     * @param result
+     */
     protected void initializeForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
         // TODO - finish me
+        // OUT[entry] = ∅;
+        // for (each basic block B\entry)
+        //     OUT[B] = ∅;
+
+        System.out.println("    cfg nodes 的数目：" + cfg.getNodes().size());
+        for (Node node: cfg) {
+            result.setInFact(node, analysis.newInitialFact());
+            result.setOutFact(node, analysis.newInitialFact());
+        }
+
+//        Node exit = cfg.getExit();
+//        result.setInFact(exit, analysis.newBoundaryFact(cfg));
+//        result.setOutFact(exit, analysis.newBoundaryFact(cfg));
+
+        Node entry = cfg.getEntry();
+        result.setInFact(entry, analysis.newBoundaryFact(cfg));
+        result.setOutFact(entry, analysis.newBoundaryFact(cfg));
+
     }
 
     protected void initializeBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
