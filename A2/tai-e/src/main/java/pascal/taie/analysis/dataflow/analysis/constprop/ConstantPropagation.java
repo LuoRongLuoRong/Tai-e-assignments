@@ -244,7 +244,7 @@ public class ConstantPropagation extends
                 // 2. 溢出异常
 
                 switch (op) {
-                    // + - * /
+                    // + - * / %
                     case "+":
                         return Value.makeConstant(c1 + c2);
                     case "-":
@@ -256,6 +256,8 @@ public class ConstantPropagation extends
                             return Value.getNAC();
                         }
                         return Value.makeConstant(c1 / c2);
+                    case "%":
+                        return Value.makeConstant(c1 % c2);
                     // == != < > <= >=
                     case "==":
                         return Value.makeConstant(c1 == c2 ? 1 : 0);
