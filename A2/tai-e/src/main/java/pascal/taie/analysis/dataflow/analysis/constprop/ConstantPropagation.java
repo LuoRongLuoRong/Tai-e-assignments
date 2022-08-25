@@ -149,6 +149,11 @@ public class ConstantPropagation extends
      *
      * (if s is not an assignment statement, F is the identity function)
      *
+     * 至于等号左侧为变量、等号右侧为其它表达式的赋值语句，例如方法调用（x = m(...)）和字段 load（x = o.f），
+     * 你需要对它们进行保守的近似处理（也许会不够精确），即把它们当作 x = NAC。
+     *
+     * 对于上面没有提到的其它语句（例如字段存储 o.f = x），我们只需要使用恒等函数作为它们的 transfer 函数。
+     *
      * @param stmt
      * @param in
      * @param out
@@ -257,6 +262,9 @@ public class ConstantPropagation extends
                         }
                         return Value.makeConstant(c1 / c2);
                     case "%":
+                        if (c2 == 0) {
+                            return Value.getNAC();
+                        }
                         return Value.makeConstant(c1 % c2);
                     // == != < > <= >=
                     case "==":
@@ -286,7 +294,7 @@ public class ConstantPropagation extends
                     case "^":
                         return Value.makeConstant(c1 ^ c2);
                     default:
-                        return Value.getUndef();
+                        return Value.getNAC();
                 }
             }
             // (3) return UNDEF
