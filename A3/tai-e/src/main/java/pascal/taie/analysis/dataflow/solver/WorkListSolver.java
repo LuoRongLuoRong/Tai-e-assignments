@@ -26,6 +26,11 @@ import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
 import pascal.taie.analysis.graph.cfg.CFG;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     WorkListSolver(DataflowAnalysis<Node, Fact> analysis) {
@@ -34,11 +39,59 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        // TODO - finish me
+        // Worklist ← all basic blocks
+        Queue<Node> workList =  new LinkedList<>();
+        for (Node node: cfg) {
+            workList.offer(node);
+        }
+
+        while (!workList.isEmpty()) {
+            // Pick a basic block B from Worklist
+            Node node = workList.poll();
+            // IN[B] = ⊔P a predecessor of B OUT[P];
+            for (Node pre: cfg.getPredsOf(node)) {
+                analysis.meetInto(result.getOutFact(pre), result.getInFact(node));
+            }
+            // OUT[B] = genB U (IN[B] - killB);
+            boolean outChanged = analysis.transferNode(node, result.getInFact(node), result.getOutFact(node));
+            if (outChanged) {
+                for (Node suc: cfg.getSuccsOf(node)) {
+                    workList.offer(suc);
+                }
+            }
+        }
     }
 
     @Override
     protected void doSolveBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        // TODO - finish me
+        System.out.println("LUORONG: doSolveBackward");
+        // 完成对应的 while 循环
+        // meetinto: out
+        // transfernode: in
+
+        // 此处需要逆序处理
+        List<Node> reverseNodes = new ArrayList<>();
+        for (Node node : cfg) {
+            reverseNodes.add(0, node);
+        }
+
+        boolean anyInHasChange = true;
+        while (anyInHasChange) {
+            anyInHasChange = false;
+            for (Node node : reverseNodes) {
+//                System.out.println("    node: " + node.toString());
+                if (cfg.isExit(node)) {
+                    continue;
+                }
+                // OUT[node]
+                result.setOutFact(node, analysis.newInitialFact());
+                for (Node suc : cfg.getSuccsOf(node)) {
+                    analysis.meetInto(result.getInFact(suc), result.getOutFact(node));
+                }
+
+                // IN[node]
+                anyInHasChange |= analysis.transferNode(node, result.getInFact(node), result.getOutFact(node));
+            }
+        }
     }
 }
