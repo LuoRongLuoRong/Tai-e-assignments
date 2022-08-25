@@ -37,7 +37,6 @@ public class CPTest {
         testCP("BinaryOp");
     }
 
-
     @Test
     public void testAssign() {
         testCP("Assign");

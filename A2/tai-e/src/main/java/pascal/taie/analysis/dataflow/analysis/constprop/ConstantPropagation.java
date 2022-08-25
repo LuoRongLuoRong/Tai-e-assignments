@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static pascal.taie.ir.exp.ArithmeticExp.Op.*;
+
 public class ConstantPropagation extends
         AbstractDataflowAnalysis<Stmt, CPFact> {
 
@@ -222,11 +224,11 @@ public class ConstantPropagation extends
             return Value.makeConstant(intLiteral.getValue());
         }
         // 2. x = y
-        else if (exp instanceof Var var) {
+        if (exp instanceof Var var) {
             return in.get(var);
         }
         // 3. x = y op z
-        else if (exp instanceof BinaryExp binaryExp) {
+        if (exp instanceof BinaryExp binaryExp) {
             Var op1 = binaryExp.getOperand1();
             Var op2 = binaryExp.getOperand2();
             BinaryExp.Op operator = binaryExp.getOperator();
@@ -234,13 +236,18 @@ public class ConstantPropagation extends
             Value val1 = in.get(op1);
             Value val2 = in.get(op2);
 
+            // special case:  x = a / 0, x is undef
+            if (val2.isConstant() && val2.getConstant() == 0 && (operator == DIV || operator == REM)) {
+                return Value.getUndef();
+            }
+
             // (2) if val(y) or val(z) is NAC, f(y,z) = NAC
             if (val1.isNAC() || val2.isNAC()) {
                 return Value.getNAC();
             }
 
             // (1) if val(y) and val(z) are constant, f(y,z) = val(y) op val(z)
-            else if (val1.isConstant() && val2.isConstant()) {
+            if (val1.isConstant() && val2.isConstant()) {
                 String op = operator.toString();
                 int c1 = val1.getConstant();
                 int c2 = val2.getConstant();
@@ -258,12 +265,12 @@ public class ConstantPropagation extends
                         return Value.makeConstant(c1 * c2);
                     case "/":
                         if (c2 == 0) {
-                            return Value.getNAC();
+                            return Value.getUndef();
                         }
                         return Value.makeConstant(c1 / c2);
                     case "%":
                         if (c2 == 0) {
-                            return Value.getNAC();
+                            return Value.getUndef();
                         }
                         return Value.makeConstant(c1 % c2);
                     // == != < > <= >=
