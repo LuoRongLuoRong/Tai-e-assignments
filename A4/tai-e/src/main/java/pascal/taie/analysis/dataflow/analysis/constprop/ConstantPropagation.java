@@ -40,6 +40,9 @@ import pascal.taie.language.type.PrimitiveType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.AnalysisException;
 
+import static pascal.taie.ir.exp.ArithmeticExp.Op.DIV;
+import static pascal.taie.ir.exp.ArithmeticExp.Op.REM;
+
 public class ConstantPropagation extends
         AbstractDataflowAnalysis<Stmt, CPFact> {
 
@@ -56,33 +59,68 @@ public class ConstantPropagation extends
 
     @Override
     public CPFact newBoundaryFact(CFG<Stmt> cfg) {
-        // TODO - finish me
-        return null;
+        CPFact ret = new CPFact();
+
+        // 处理每个会被分析的方法的参数
+        for (Var var : cfg.getIR().getParams()){
+            if (canHoldInt(var)){
+                ret.update(var, Value.getNAC());
+            }
+        }
+        return ret;
     }
 
     @Override
     public CPFact newInitialFact() {
-        // TODO - finish me
-        return null;
+        CPFact ret = new CPFact();
+        return ret;
     }
 
     @Override
     public void meetInto(CPFact fact, CPFact target) {
-        // TODO - finish me
+        for (Var var: fact.keySet()) {
+            target.update(var, meetValue(fact.get(var), target.get(var)));
+        }
     }
 
     /**
      * Meets two Values.
      */
     public Value meetValue(Value v1, Value v2) {
-        // TODO - finish me
-        return null;
+        if (v1.isNAC() || v2.isNAC()) {
+            return Value.getNAC();
+        }
+
+        if (v1.isUndef() && v2.isUndef()) {
+            return Value.getUndef();
+        } else if (v1.isUndef()) {
+            return v2;
+        } else if (v2.isUndef()) {
+            return v1;
+        }
+
+        if (v1.getConstant() == v2.getConstant()) {
+            return v1;
+        } else {
+            return Value.getNAC();
+        }
     }
 
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
-        // TODO - finish me
-        return false;
+        if (stmt instanceof DefinitionStmt<?,?> definitionStmt) {
+            // 判断一个变量是否在本次作业的分析范围内，并忽略那些不在范围内的变量
+            if (definitionStmt.getLValue() instanceof Var var && canHoldInt(var)){
+                CPFact inCopy = new CPFact();
+                inCopy.copyFrom(in);
+                // 用 gen 替换掉 原来的 x 的取值
+                inCopy.update(var, evaluate(definitionStmt.getRValue(), inCopy));
+                return out.copyFrom(inCopy);
+            }
+        }
+
+        // OUT[s] = IN[s]
+        return out.copyFrom(in);
     }
 
     /**
@@ -111,7 +149,99 @@ public class ConstantPropagation extends
      * @return the resulting {@link Value}
      */
     public static Value evaluate(Exp exp, CPFact in) {
-        // TODO - finish me
-        return null;
+        // 1. x = c
+        if (exp instanceof IntLiteral intLiteral) {
+            return Value.makeConstant(intLiteral.getValue());
+        }
+        // 2. x = y
+        if (exp instanceof Var var) {
+            return in.get(var);
+        }
+        // 3. x = y op z
+        if (exp instanceof BinaryExp binaryExp) {
+            Var op1 = binaryExp.getOperand1();
+            Var op2 = binaryExp.getOperand2();
+            BinaryExp.Op operator = binaryExp.getOperator();
+
+            Value val1 = in.get(op1);
+            Value val2 = in.get(op2);
+
+            // special case:  x = a / 0, x is undef
+            if (val2.isConstant() && val2.getConstant() == 0 && (operator == DIV || operator == REM)) {
+                return Value.getUndef();
+            }
+
+            // (2) if val(y) or val(z) is NAC, f(y,z) = NAC
+            if (val1.isNAC() || val2.isNAC()) {
+                return Value.getNAC();
+            }
+
+            // (1) if val(y) and val(z) are constant, f(y,z) = val(y) op val(z)
+            if (val1.isConstant() && val2.isConstant()) {
+                String op = operator.toString();
+                int c1 = val1.getConstant();
+                int c2 = val2.getConstant();
+
+                // 1. 除 0 异常
+                // 2. 溢出异常
+
+                switch (op) {
+                    // + - * / %
+                    case "+":
+                        return Value.makeConstant(c1 + c2);
+                    case "-":
+                        return Value.makeConstant(c1 - c2);
+                    case "*":
+                        return Value.makeConstant(c1 * c2);
+                    case "/":
+                        if (c2 == 0) {
+                            return Value.getUndef();
+                        }
+                        return Value.makeConstant(c1 / c2);
+                    case "%":
+                        if (c2 == 0) {
+                            return Value.getUndef();
+                        }
+                        return Value.makeConstant(c1 % c2);
+                    // == != < > <= >=
+                    case "==":
+                        return Value.makeConstant(c1 == c2 ? 1 : 0);
+                    case "!=":
+                        return Value.makeConstant(c1 != c2 ? 1 : 0);
+                    case "<":
+                        return Value.makeConstant(c1 < c2 ? 1 : 0);
+                    case ">":
+                        return Value.makeConstant(c1 > c2 ? 1 : 0);
+                    case "<=":
+                        return Value.makeConstant(c1 <= c2 ? 1 : 0);
+                    case ">=":
+                        return Value.makeConstant(c1 >= c2 ? 1 : 0);
+                    // << >> >>>
+                    case "<<":
+                        return Value.makeConstant(c1 << c2);
+                    case ">>":
+                        return Value.makeConstant(c1 >> c2);
+                    case ">>>":
+                        return Value.makeConstant(c1 >>> c2);
+                    // | & ^
+                    case "|":
+                        return Value.makeConstant(c1 | c2);
+                    case "&":
+                        return Value.makeConstant(c1 & c2);
+                    case "^":
+                        return Value.makeConstant(c1 ^ c2);
+                    default:
+                        return Value.getNAC();
+                }
+            }
+            // (3) return UNDEF
+            else {
+                return Value.getUndef();
+            }
+        }
+        // 其它情况
+        else {
+            return Value.getNAC();
+        }
     }
 }
