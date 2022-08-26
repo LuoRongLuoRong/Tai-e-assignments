@@ -64,7 +64,6 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     @Override
     protected void doSolveBackward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        System.out.println("LUORONG: doSolveBackward");
         // 完成对应的 while 循环
         // meetinto: out
         // transfernode: in

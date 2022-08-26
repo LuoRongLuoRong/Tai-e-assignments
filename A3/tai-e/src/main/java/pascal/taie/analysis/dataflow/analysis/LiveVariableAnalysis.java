@@ -69,11 +69,6 @@ public class LiveVariableAnalysis extends
     @Override
     public boolean transferNode(Stmt stmt, SetFact<Var> in, SetFact<Var> out) {
         // IN[B] = useB U (OUT[B] - defB)
-        System.out.println("LUORONG: transferNode");
-        System.out.println("         lineNumber=" + stmt.getLineNumber());
-
-        // return value
-        boolean hasChange = false;
         // 深度拷贝 in，目的是检查 in 是否改变了
         SetFact<Var> inCopy = new SetFact<>();
         inCopy.set(in);
@@ -81,7 +76,6 @@ public class LiveVariableAnalysis extends
         // 1. IN[B] = useB
         in.clear();
         for (RValue rValue: stmt.getUses()) {
-            System.out.println(rValue.toString());
             if (rValue instanceof Var) {
                 in.add((Var) rValue);
             }
