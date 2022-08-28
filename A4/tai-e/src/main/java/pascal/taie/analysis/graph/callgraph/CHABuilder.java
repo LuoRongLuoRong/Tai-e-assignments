@@ -74,6 +74,10 @@ class CHABuilder implements CGBuilder<Invoke, JMethod> {
             }
         }
 
+        for (JMethod jMethod: reachableMethods) {
+            callGraph.addReachableMethod(jMethod);
+        }
+
         return callGraph;
     }
 

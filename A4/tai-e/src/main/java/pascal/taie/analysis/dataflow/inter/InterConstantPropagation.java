@@ -197,8 +197,8 @@ public class InterConstantPropagation extends
         // TODO - finish me
         CPFact newOut = new CPFact();
 
-        Invoke target = (Invoke) edge.getTarget();
-        Var lVar = target.getLValue();
+        Invoke callSite = (Invoke) edge.getCallSite();
+        Var lVar = callSite.getLValue();
         // lValue 为空
         if (null == lVar) {
             return newOut;

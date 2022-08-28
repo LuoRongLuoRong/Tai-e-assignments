@@ -29,6 +29,7 @@ import pascal.taie.analysis.graph.icfg.ICFGEdge;
 import pascal.taie.language.classes.JMethod;
 import pascal.taie.util.collection.SetQueue;
 
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -64,26 +65,23 @@ class InterSolver<Method, Node, Fact> {
 
     /**
      * 你需要在 initialize() 中初始化 ICFG 节点的 IN/OUT fact，
-     * 还需要在 doSolve() 中实现 worklist 算法的主要部分。
+     *      2. 在初始化的过程中，过程间求解器需要初始化程序中所有的 IN/OUT fact，
+     *      也就是 ICFG 的全部节点。但你仅需要对 ICFG 的 entry 方法（比如 main 方法）的 entry 节点设置 boundary fact。
+     *      这意味着其他方法的 entry 节点和非 entry 节点的初始 fact 是一样的。
      */
 
     private void initialize() {
         // TODO - finish me
         for (Node node: icfg) {
+            System.out.println("*** NODE set in and out fact");
             result.setInFact(node, analysis.newInitialFact());
             result.setOutFact(node, analysis.newInitialFact());
         }
 
-        Stream<Method> entryMethods = icfg.entryMethods();
-        entryMethods.forEach(method -> {
+        icfg.entryMethods().forEach(method -> {
             Node entry = icfg.getEntryOf(method);
             result.setInFact(entry, analysis.newBoundaryFact(entry));
-            Fact fact = analysis.newBoundaryFact(entry);
-            result.setOutFact(entry, fact);
-
-            Node exit = icfg.getEntryOf(method);
-            result.setInFact(exit, analysis.newBoundaryFact(exit));
-            result.setOutFact(exit, analysis.newBoundaryFact(exit));
+            result.setOutFact(entry, analysis.newBoundaryFact(entry));
         });
     }
 
@@ -99,6 +97,7 @@ class InterSolver<Method, Node, Fact> {
     private void doSolve() {
         // TODO - finish me
 
+        workList = new LinkedList<>();
         for (Node node: icfg) {
             workList.offer(node);
         }
